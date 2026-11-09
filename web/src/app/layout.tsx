@@ -5,7 +5,10 @@ import { cn } from "@/shared/lib/utils";
 
 import { QueryProvider } from "@/shared/api/query-provider";
 
-const figtree = Figtree({ subsets: ["latin", "latin-ext"], variable: "--font-sans" });
+const figtree = Figtree({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-sans",
+});
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -29,6 +32,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         figtree.variable,
       )}
     >
+      <head>
+        {/* Base colors live outside the bundle so they can change without a rebuild (D16) */}
+        {/* eslint-disable-next-line @next/next/no-css-tags */}
+        <link rel="stylesheet" href="/theme.css" />
+      </head>
       <body className="flex min-h-full flex-col">
         <QueryProvider>{children}</QueryProvider>
       </body>

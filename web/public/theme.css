@@ -1,0 +1,9 @@
+/*
+ * Infillo base colors. The whole palette is derived from these three values
+ * in globals.css. Change only these lines to change the tone of the app.
+ */
+:root {
+  --brand-primary: oklch(0.68 0.18 45); /* warm orange — main actions */
+  --brand-secondary: oklch(0.4 0.08 255); /* deep blue — text, surfaces */
+  --brand-accent: oklch(0.82 0.16 130); /* lime — highlights */
+}
