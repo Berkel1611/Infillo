@@ -22,8 +22,8 @@ services:
     image: axllent/mailpit
     container_name: infillo-mailpit
     ports:
-      - "8025:8025" # mail preview in the browser
-      - "1025:1025" # SMTP for the API
+      - "${MAILPIT_UI_PORT:-8025}:8025" # mail preview in the browser
+      - "${MAILPIT_SMTP_PORT:-1025}:1025" # SMTP for the API
 
 volumes:
   db-data:
