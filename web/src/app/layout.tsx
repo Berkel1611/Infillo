@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/shared/lib/utils";
 
 import { QueryProvider } from "@/shared/api/query-provider";
+import { AppShell } from "@/shared/layout/AppShell";
 
 const figtree = Figtree({
   subsets: ["latin", "latin-ext"],
@@ -38,7 +39,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <link rel="stylesheet" href="/theme.css" />
       </head>
       <body className="flex min-h-full flex-col">
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          <AppShell>{children}</AppShell>
+        </QueryProvider>
       </body>
     </html>
   );
