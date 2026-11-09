@@ -1,0 +1,132 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-accent: var(--brand-accent);
+}
+
+:root {
+  /* Text color on top of a color: light when the color is dark, dark otherwise */
+  --on-primary: oklch(
+    from var(--brand-primary) clamp(0.15, (0.62 - l) * 1000, 0.985) 0 0
+  );
+  --on-secondary: oklch(
+    from var(--brand-secondary) clamp(0.15, (0.62 - l) * 1000, 0.985) 0 0
+  );
+  --on-accent: oklch(
+    from var(--brand-accent) clamp(0.15, (0.62 - l) * 1000, 0.985) 0 0
+  );
+
+  /* Surfaces — tinted with the secondary color */
+  --background: color-mix(in oklch, var(--brand-secondary) 4%, white);
+  --foreground: oklch(from var(--brand-secondary) 0.2 calc(c * 0.4) h);
+  --card: color-mix(in oklch, var(--brand-secondary) 1%, white);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --muted: color-mix(in oklch, var(--brand-secondary) 9%, white);
+  --muted-foreground: oklch(from var(--brand-secondary) 0.45 calc(c * 0.5) h);
+  --border: color-mix(in oklch, var(--brand-secondary) 18%, white);
+  --input: var(--border);
+
+  /* Brand roles */
+  --primary: var(--brand-primary);
+  --primary-foreground: var(--on-primary);
+  --secondary: var(--brand-secondary);
+  --secondary-foreground: var(--on-secondary);
+  /* shadcn uses "accent" for hover backgrounds, so it is a light tint */
+  --accent: color-mix(in oklch, var(--brand-accent) 25%, white);
+  --accent-foreground: var(--foreground);
+  --ring: var(--brand-primary);
+
+  /* Semantic color — independent of the brand on purpose */
+  --destructive: oklch(0.577 0.245 27.325);
+
+  --chart-1: var(--brand-primary);
+  --chart-2: var(--brand-secondary);
+  --chart-3: var(--brand-accent);
+  --chart-4: color-mix(
+    in oklch,
+    var(--brand-primary) 50%,
+    var(--brand-secondary)
+  );
+  --chart-5: color-mix(
+    in oklch,
+    var(--brand-accent) 50%,
+    var(--brand-secondary)
+  );
+
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  --radius: 0.625rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  /* focus must always be clearly visible */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
