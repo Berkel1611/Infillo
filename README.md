@@ -4,7 +4,7 @@ Sklep internetowy z wydrukami 3D połączony ze społecznością. Projekt zalicz
 
 ## Technologie
 
-- **Backend:** Python 3.12+, FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 17
+- **Backend:** Python 3.12+, Django 5.2 LTS, Django REST Framework, PostgreSQL 17
 - **Frontend:** Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui (Base UI)
 - **Infrastruktura:** Docker Compose (PostgreSQL, Mailpit)
 
@@ -33,11 +33,23 @@ python -m venv venv
 venv\Scripts\activate        # Linux / macOS: source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-alembic upgrade head
-uvicorn app.main:app --reload
 ```
 
-API: http://localhost:8000, dokumentacja: http://localhost:8000/docs
+W `api/.env` ustaw własny `SECRET_KEY`:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+Następnie:
+
+```bash
+python manage.py migrate
+python manage.py createsuperuser   # konto administratora (e-mail, nazwa użytkownika, imię, nazwisko, hasło)
+python manage.py runserver
+```
+
+API: http://localhost:8000, panel Django (narzędzie deweloperskie): http://localhost:8000/admin/
 
 ### 3. Frontend (`web/`)
 
@@ -56,13 +68,14 @@ Aplikacja: http://localhost:3000
 |---|---|
 | Aplikacja | http://localhost:3000 |
 | API | http://localhost:8000 |
+| Panel Django (narzędzie deweloperskie) | http://localhost:8000/admin/ |
 | Podgląd wysłanych e-maili (Mailpit) | http://localhost:8025 |
 | PostgreSQL | localhost:5432 |
 
 ## Testy i jakość kodu
 
 ```bash
-# backend (w api/, z aktywnym venv; testy tworzą i usuwają bazę infillo_test)
+# backend (w api/, z aktywnym venv; pytest-django tworzy i usuwa bazę test_infillo)
 pytest
 ruff check .
 ruff format --check .
