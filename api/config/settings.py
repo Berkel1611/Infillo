@@ -26,7 +26,11 @@ INSTALLED_APPS = [
     "corsheaders",
     # Our apps
     "apps.core",
+    "apps.accounts",
 ]
+
+# Must be set before the first migrate
+AUTH_USER_MODEL = "accounts.User"
 
 MIDDLEWARE = [
     # CORS must run before anything that can return a response
