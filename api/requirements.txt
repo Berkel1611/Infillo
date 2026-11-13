@@ -1,11 +1,10 @@
-fastapi
-uvicorn[standard]
-sqlalchemy>=2.0
+django>=5.2,<5.3
+djangorestframework
 psycopg[binary]>=3.2
-alembic
-pydantic-settings
+django-environ
+django-cors-headers
 
 # dev
 pytest
-httpx
+pytest-django
 ruff
