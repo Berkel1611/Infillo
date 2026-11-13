@@ -32,6 +32,19 @@ INSTALLED_APPS = [
 
 # Must be set before the first migrate
 AUTH_USER_MODEL = "accounts.User"
+# Log in with e-mail or username (also in the Django admin). Replaces the default ModelBackend;
+# ours extends it, so permission checks keep working.
+AUTHENTICATION_BACKENDS = ["apps.accounts.backends.EmailOrUsernameBackend"]
+
+
+# Password rules used by validate_password() in RegisterSerializer (Django has none by default).
+# Minimum length is 8 (the default of MinimumLengthValidator).
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+]
 
 MIDDLEWARE = [
     # CORS must run before anything that can return a response
