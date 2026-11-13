@@ -12,6 +12,12 @@ username_validator = RegexValidator(
     code="invalid_username",
 )
 
+# Role names as exposed by the API (the "role" field) and the group that marks a moderator
+ROLE_USER = "user"
+ROLE_MODERATOR = "moderator"
+ROLE_ADMIN = "admin"
+MODERATORS_GROUP = "moderators"
+
 
 class User(AbstractUser):
     """Logs in with e-mail or username; username is the public name shown in the community."""
@@ -38,6 +44,18 @@ class User(AbstractUser):
             # "Jan" and "jan" are the same username (login is case-insensitive)
             models.UniqueConstraint(Lower("username"), name="uq_user_username_lower"),
         ]
+
+    @property
+    def role(self) -> str:
+        """Derived from existing data, there is no role column:
+        superuser -> admin, group - > moderator."""
+        if self.is_superuser:
+            return ROLE_ADMIN
+        # .all() reuses the cache filled by prefetch_related("groups"), so lists of users
+        # need no extra query per row (a .filter(...).exists() would bypass the cache)
+        if any(group.name == MODERATORS_GROUP for group in self.groups.all()):
+            return ROLE_MODERATOR
+        return ROLE_USER
 
     def __str__(self) -> str:
         return self.email

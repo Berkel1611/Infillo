@@ -1,7 +1,10 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+
+from apps.accounts.models import MODERATORS_GROUP, ROLE_ADMIN, ROLE_MODERATOR, ROLE_USER
 
 User = get_user_model()
 
@@ -83,3 +86,56 @@ def test_invalid_usernames_are_rejected(username: str) -> None:
         user.full_clean(validate_unique=False, validate_constraints=False)
 
     assert "username" in error.value.message_dict
+
+
+@pytest.mark.django_db
+def test_moderators_group_is_created_by_migration() -> None:
+    # No fixture and no manual create: the data migration 0002 made it
+    assert Group.objects.filter(name=MODERATORS_GROUP).exists()
+
+
+@pytest.mark.django_db
+def test_role_user_moderator_and_admin() -> None:
+    regular = make_user(email="user@test.pl", username="regular")
+    moderator = make_user(email="mod@test.pl", username="moderator")
+    moderator.groups.add(Group.objects.get(name=MODERATORS_GROUP))
+    admin = User.objects.create_superuser(
+        email="admin@test.pl",
+        username="admin",
+        password=PASSWORD,
+        first_name="Ada",
+        last_name="Admin",
+    )
+
+    assert regular.role == ROLE_USER
+    assert moderator.role == ROLE_MODERATOR
+    assert admin.role == ROLE_ADMIN
+
+
+@pytest.mark.django_db
+def test_superuser_in_moderators_group_is_still_admin() -> None:
+    admin = User.objects.create_superuser(
+        email="admin@test.pl",
+        username="admin",
+        password=PASSWORD,
+        first_name="Ada",
+        last_name="Admin",
+    )
+    admin.groups.add(Group.objects.get(name=MODERATORS_GROUP))
+
+    assert admin.role == ROLE_ADMIN
+
+
+@pytest.mark.django_db
+def test_role_uses_prefetched_groups_without_extra_queries(django_assert_num_queries) -> None:
+    make_user(email="one@test.pl", username="one")
+    moderator = make_user(email="two@test.pl", username="two")
+    moderator.groups.add(Group.objects.get(name=MODERATORS_GROUP))
+
+    users = list(User.objects.prefetch_related("groups"))
+
+    # Roles of all users are computed from the prefetched cache: zero queries
+    with django_assert_num_queries(0):
+        roles = {user.username: user.role for user in users}
+
+    assert roles == {"one": ROLE_USER, "two": ROLE_MODERATOR}
