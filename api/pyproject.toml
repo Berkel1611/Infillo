@@ -1,13 +1,11 @@
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+extend-exclude = ["*/migrations/*"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
-
-[tool.ruff.lint.isort]
-known-third-party = ["alembic"]
+select = ["E", "F", "I", "UP", "B", "DJ"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]
