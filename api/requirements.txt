@@ -3,6 +3,7 @@ djangorestframework
 psycopg[binary]>=3.2
 django-environ
 django-cors-headers
+djangorestframework-simplejwt
 
 # dev
 pytest

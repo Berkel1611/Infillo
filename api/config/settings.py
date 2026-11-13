@@ -1,5 +1,6 @@
 """Django settings for the Infillo API. Values that differ between machines come from .env."""
 
+from datetime import timedelta
 from pathlib import Path
 
 import environ
@@ -84,4 +85,20 @@ CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
+    # Token from the httpOnly cookie, user loaded from the database
+    "DEFAULT_AUTHENTICATION_CLASSES": ["apps.accounts.authentication.CookieJWTAuthentication"],
+    # Closed by default; public views opt out with AllowAny
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    # JSON only: together with SameSite=Lax this is our CSRF protection (R1)
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    "DEFAULT_PAGINATION_CLASS": "apps.core.pagination.StandardPagination",
 }
+
+# JWT in a cookie: 8 h, no refresh token
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=8),
+    "SIGNING_KEY": env("JWT_SECRET"),  # separate from SECRET_KEY
+}
+AUTH_COOKIE_NAME = "infillo_access_token"
+AUTH_COOKIE_SECURE = env.bool("AUTH_COOKIE_SECURE", default=False)  # True behind HTTPS
+AUTH_COOKIE_SAMESITE = "Lax"
