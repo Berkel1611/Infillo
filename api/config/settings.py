@@ -77,3 +77,7 @@ APPEND_SLASH = False
 
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost:3000"])
 CORS_ALLOW_CREDENTIALS = True
+
+REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
+}

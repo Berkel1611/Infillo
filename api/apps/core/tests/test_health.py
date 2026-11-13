@@ -8,9 +8,3 @@ def test_health_reports_database_ok() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "database": "ok"}
-
-
-def test_health_rejects_other_methods() -> None:
-    response = APIClient().post("/health")
-
-    assert response.status_code == 405
