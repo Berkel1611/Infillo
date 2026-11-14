@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import AdminUserCreationForm, UserChangeForm
 
-from apps.accounts.models import User
+from apps.accounts.models import ShippingAddress, User
 
 
 class UserCreateForm(AdminUserCreationForm):
@@ -18,6 +18,11 @@ class UserEditForm(UserChangeForm):
         field_classes = {}  # the base form maps a "username" field we no longer have
 
 
+class ShippingAddressInline(admin.StackedInline):
+    model = ShippingAddress
+    extra = 0  # no empty form for users who have no address yet
+
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     """Developer tool only — the graded admin screens live in the Next.js frontend."""
@@ -27,6 +32,7 @@ class UserAdmin(BaseUserAdmin):
     ordering = ("email",)
     list_display = ("email", "first_name", "last_name", "is_superuser", "is_active")
     search_fields = ("email", "first_name", "last_name")
+    inlines = [ShippingAddressInline]
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         ("Personal info", {"fields": ("first_name", "last_name")}),

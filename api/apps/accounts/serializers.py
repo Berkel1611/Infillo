@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
-from apps.accounts.models import username_validator
+from apps.accounts.models import ShippingAddress, username_validator
 
 User = get_user_model()
 
@@ -28,14 +28,20 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class RegisterSerializer(serializers.Serializer):
-    """Input only."""
+class ProfileFieldsSerializer(serializers.Serializer):
+    """Fields shared by registration and profile update (one set of rules for both)."""
 
-    email = serializers.EmailField(max_length=254)
     username = serializers.CharField(min_length=3, max_length=30, validators=[username_validator])
-    password = serializers.CharField(max_length=128, write_only=True, trim_whitespace=False)
     first_name = serializers.CharField(max_length=50)
     last_name = serializers.CharField(max_length=80)
+
+
+class RegisterSerializer(ProfileFieldsSerializer):
+    """Input only. A plain Serializer on purpose: uniqueness 
+    is checked in services.py (-> 409)."""
+
+    email = serializers.EmailField(max_length=254)
+    password = serializers.CharField(max_length=128, write_only=True, trim_whitespace=False)
 
     def validate_email(self, value: str) -> str:
         return value.lower()
@@ -64,3 +70,15 @@ class RegisterSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     login = serializers.CharField(max_length=254)
     password = serializers.CharField(max_length=128, write_only=True, trim_whitespace=False)
+
+
+class ProfileUpdateSerializer(ProfileFieldsSerializer):
+    """PATCH /auth/me. Used with partial=True: only the fields that were sent are required."""
+
+
+class ShippingAddressSerializer(serializers.ModelSerializer):
+    # Field rules come from the model
+    class Meta:
+        model = ShippingAddress
+        fields = ("street", "postal_code", "city", "phone", "updated_at")
+        read_only_fields = ("updated_at",)

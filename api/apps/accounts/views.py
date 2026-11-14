@@ -1,12 +1,25 @@
-from rest_framework import generics, status
+from django.http import JsonResponse
+from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.authentication import clear_auth_cookie, set_auth_cookie
-from apps.accounts.serializers import LoginSerializer, RegisterSerializer, UserSerializer
-from apps.accounts.services import authenticate_user, register_user
+from apps.accounts.models import ShippingAddress
+from apps.accounts.serializers import (
+    LoginSerializer,
+    ProfileUpdateSerializer,
+    RegisterSerializer,
+    ShippingAddressSerializer,
+    UserSerializer,
+)
+from apps.accounts.services import (
+    authenticate_user,
+    register_user,
+    save_shipping_address,
+    update_profile,
+)
 
 
 class RegisterView(APIView):
@@ -46,10 +59,29 @@ class LogoutView(APIView):
         return response
 
 
-class MeView(generics.RetrieveAPIView):
+class MeView(APIView):
     """The current user (default authentication and IsAuthenticated apply)."""
 
-    serializer_class = UserSerializer
+    def get(self, request: Request) -> Response:
+        return Response(UserSerializer(request.user).data)
 
-    def get_object(self):
-        return self.request.user
+    def patch(self, request: Request) -> Response:
+        serializer = ProfileUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = update_profile(request.user, **serializer.validated_data)
+        return Response(UserSerializer(user).data)
+
+
+class MyAddressView(APIView):
+    def get(self, request: Request) -> Response:
+        address = ShippingAddress.objects.filter(user=request.user).first()
+        if address is None:
+            # DRF renders Response(None) as an empty body; the contract says JSON null
+            return JsonResponse(None, safe=False)
+        return Response(ShippingAddressSerializer(address).data)
+
+    def put(self, request: Request) -> Response:
+        serializer = ShippingAddressSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        address = save_shipping_address(request.user, **serializer.validated_data)
+        return Response(ShippingAddressSerializer(address).data)

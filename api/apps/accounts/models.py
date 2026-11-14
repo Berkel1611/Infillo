@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinLengthValidator, RegexValidator
 from django.db import models
@@ -10,6 +11,16 @@ username_validator = RegexValidator(
     regex=r"^[\w.+-]+\Z",
     message="Enter a valid username: letters, digits and . + - _ only.",
     code="invalid_username",
+)
+postal_code_validator = RegexValidator(
+    regex=r"^\d{2}-\d{3}\Z",
+    message="Enter a postal code like 15-001.",
+    code="invalid_postal_code",
+)
+phone_validator = RegexValidator(
+    regex=r"^[\d +]+\Z",
+    message="Enter digits, spaces and + only.",
+    code="invalid_phone",
 )
 
 # Role names as exposed by the API (the "role" field) and the group that marks a moderator
@@ -59,3 +70,23 @@ class User(AbstractUser):
 
     def __str__(self) -> str:
         return self.email
+
+
+class ShippingAddress(models.Model):
+    """One shipping address per user (Poland only). 
+      The recipient is the user's first and last name."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,  # never import User here: the model is swappable
+        on_delete=models.CASCADE,  # deleting the account deletes the address
+        related_name="shipping_address",  # user.shipping_address
+    )
+    street = models.CharField("street and number", max_length=200)
+    postal_code = models.CharField(max_length=6, validators=[postal_code_validator])
+    city = models.CharField(max_length=100)
+    # blank=True: an empty string means "no phone" (Django stores "" instead of NULL for text)
+    phone = models.CharField(max_length=20, blank=True, validators=[phone_validator])
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        return f"{self.street}, {self.postal_code} {self.city}"
