@@ -3,7 +3,13 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
-from apps.accounts.models import ShippingAddress, username_validator
+from apps.accounts.models import (
+    ROLE_ADMIN,
+    ROLE_MODERATOR,
+    ROLE_USER,
+    ShippingAddress,
+    username_validator,
+)
 
 User = get_user_model()
 
@@ -37,7 +43,7 @@ class ProfileFieldsSerializer(serializers.Serializer):
 
 
 class RegisterSerializer(ProfileFieldsSerializer):
-    """Input only. A plain Serializer on purpose: uniqueness 
+    """Input only. A plain Serializer on purpose: uniqueness
     is checked in services.py (-> 409)."""
 
     email = serializers.EmailField(max_length=254)
@@ -82,3 +88,20 @@ class ShippingAddressSerializer(serializers.ModelSerializer):
         model = ShippingAddress
         fields = ("street", "postal_code", "city", "phone", "updated_at")
         read_only_fields = ("updated_at",)
+
+
+class UserListQuerySerializer(serializers.Serializer):
+    """Validates the query string of GET /users (?role=&search=)."""
+
+    role = serializers.ChoiceField(
+        choices=[ROLE_USER, ROLE_MODERATOR, ROLE_ADMIN], required=False, allow_blank=True
+    )
+    search = serializers.CharField(max_length=254, required=False, allow_blank=True)
+
+
+class UserAdminUpdateSerializer(serializers.Serializer):
+    """PATCH /user/{id}. The role "admin" is not accepted: 
+    administrators come from createsuperuser."""
+
+    role = serializers.ChoiceField(choices=[ROLE_USER, ROLE_MODERATOR], required=False)
+    is_active = serializers.BooleanField(required=False)

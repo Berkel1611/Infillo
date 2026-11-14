@@ -73,8 +73,8 @@ class User(AbstractUser):
 
 
 class ShippingAddress(models.Model):
-    """One shipping address per user (Poland only). 
-      The recipient is the user's first and last name."""
+    """One shipping address per user (Poland only).
+    The recipient is the user's first and last name."""
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,  # never import User here: the model is swappable

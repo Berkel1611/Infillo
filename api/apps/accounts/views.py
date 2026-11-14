@@ -1,5 +1,6 @@
-from django.http import JsonResponse
-from rest_framework import status
+from django.contrib.auth import get_user_model
+from django.http import Http404, JsonResponse
+from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -7,19 +8,27 @@ from rest_framework.views import APIView
 
 from apps.accounts.authentication import clear_auth_cookie, set_auth_cookie
 from apps.accounts.models import ShippingAddress
+from apps.accounts.permissions import IsAdmin
 from apps.accounts.serializers import (
     LoginSerializer,
     ProfileUpdateSerializer,
     RegisterSerializer,
     ShippingAddressSerializer,
+    UserAdminUpdateSerializer,
+    UserListQuerySerializer,
     UserSerializer,
 )
 from apps.accounts.services import (
     authenticate_user,
+    filter_users_by_role,
     register_user,
     save_shipping_address,
     update_profile,
+    update_user_by_admin,
 )
+from apps.core.exceptions import AppError
+
+User = get_user_model()
 
 
 class RegisterView(APIView):
@@ -85,3 +94,37 @@ class MyAddressView(APIView):
         serializer.is_valid(raise_exception=True)
         address = save_shipping_address(request.user, **serializer.validated_data)
         return Response(ShippingAddressSerializer(address).data)
+
+
+class UserAdminViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """GET /users (list) and PATCH /users/{id} (role and block). Administrators only."""
+
+    permission_classes = [IsAdmin]
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        # prefetch_related: one extra query for the groups of the whole page
+        queryset = User.objects.prefetch_related("groups").order_by("id")
+        if self.action != "list":
+            return queryset
+
+        params = UserListQuerySerializer(data=self.request.query_params)
+        params.is_valid(raise_exception=True)
+        if role := params.validated_data.get("role"):
+            queryset = filter_users_by_role(queryset, role)
+        if search := params.validated_data.get("search"):
+            queryset = queryset.filter(email__icontains=search)
+        return queryset
+
+    def get_object(self):
+        try:
+            return super().get_object()
+        except Http404:
+            raise AppError("USER_NOT_FOUND", 404) from None
+
+    def partial_update(self, request: Request, *args, **kwargs) -> Response:
+        target = self.get_object()
+        serializer = UserAdminUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = update_user_by_admin(request.user, target, **serializer.validated_data)
+        return Response(UserSerializer(user).data)

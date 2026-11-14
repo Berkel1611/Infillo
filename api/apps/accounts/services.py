@@ -1,9 +1,15 @@
 """Business rules of the accounts app; views stay thin and only call these functions."""
 
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.models import Group
 from django.db import IntegrityError, transaction
 
-from apps.accounts.models import ShippingAddress
+from apps.accounts.models import (
+    MODERATORS_GROUP,
+    ROLE_ADMIN,
+    ROLE_MODERATOR,
+    ShippingAddress,
+)
 from apps.core.exceptions import AppError
 
 User = get_user_model()
@@ -65,3 +71,42 @@ def save_shipping_address(user, **fields) -> ShippingAddress:
     """Creates or overwrites the user's single address."""
     address, _created = ShippingAddress.objects.update_or_create(user=user, defaults=fields)
     return address
+
+
+def filter_users_by_role(queryset, role: str):
+    """Same meaning as User.role: superuser -> admin, member of "moderators" -> moderator."""
+    if role == ROLE_ADMIN:
+        return queryset.filter(is_superuser=True)
+    queryset = queryset.filter(is_superuser=False)
+    if role == ROLE_MODERATOR:
+        return queryset.filter(groups__name=MODERATORS_GROUP)
+    return queryset.exclude(groups__name=MODERATORS_GROUP)  # ROLE_USER
+
+
+def set_role(user, role: str) -> None:
+    """user <-> moderator: the role is membership in the "moderators" group."""
+    group = Group.objects.get(name=MODERATORS_GROUP)
+    if role == ROLE_MODERATOR:
+        user.groups.add(group)
+    else:
+        user.groups.remove(group)
+
+
+def set_active(user, is_active: bool) -> None:
+    """Blocks or unblocks. Takes effect at once: authentication loads the user on each request."""
+    user.is_active = is_active
+    user.save(update_fields=["is_active"])
+
+
+def update_user_by_admin(actor, target, *, role: str | None = None, is_active: bool | None = None):
+    """Role and block changes made by an administrator."""
+    if target.pk == actor.pk:
+        raise AppError("CANNOT_MODIFY_SELF", 400)
+    if target.is_superuser:
+        raise AppError("CANNOT_MODIFY_ADMIN", 400)
+    with transaction.atomic():  # both changes or none
+        if role is not None:
+            set_role(target, role)
+        if is_active is not None:
+            set_active(target, is_active)
+    return target
