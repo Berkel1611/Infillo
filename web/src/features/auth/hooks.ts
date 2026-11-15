@@ -40,13 +40,11 @@ export function useRegister() {
 }
 
 export function useLogout() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: authApi.logout,
-    onSettled: () => {
-      // Drop all cached data of the previous user, then mark "logged out"
-      queryClient.clear();
-      queryClient.setQueryData(currentUserKey, null);
-    },
+    // A full page load drops everything cached for the signed-out user and
+    // cannot race with AuthGuard (which would send us to /login?next=...)
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    onSuccess: () => window.location.assign("/"),
   });
 }

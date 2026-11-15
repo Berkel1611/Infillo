@@ -107,7 +107,6 @@ export function RegisterForm() {
             </FormField>
             <FormField
               label="Nazwa użytkownika"
-              description="Publiczna nazwa w społeczności: 3–30 znaków, litery, cyfry i . + - _"
               error={errors.username?.message}
             >
               {(control) => (

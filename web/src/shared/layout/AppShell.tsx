@@ -5,7 +5,13 @@ import { MobileNav } from "./MobileNav";
 import { NAV_ITEMS } from "./nav-items";
 import { NavLink } from "./NavLink";
 
-export function AppShell({ children }: { children: ReactNode }) {
+type AppShellProps = {
+  /** Right side of the header: the user menu (passed in, so shared/ does not import features/) */
+  headerActions?: ReactNode;
+  children: ReactNode;
+};
+
+export function AppShell({ headerActions, children }: AppShellProps) {
   return (
     <>
       <a
@@ -31,7 +37,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               ))}
             </ul>
           </nav>
-          <MobileNav />
+          <div className="flex items-center gap-2">
+            {headerActions}
+            <MobileNav />
+          </div>
         </div>
       </header>
       <main id="main" tabIndex={-1} className="flex-1 outline-none">

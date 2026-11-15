@@ -5,6 +5,8 @@ import { cn } from "@/shared/lib/utils";
 
 import { QueryProvider } from "@/shared/api/query-provider";
 import { AppShell } from "@/shared/layout/AppShell";
+import { UserMenu } from "@/features/auth/components/UserMenu";
+import { Toaster } from "@/shared/ui/sonner";
 
 const figtree = Figtree({
   subsets: ["latin", "latin-ext"],
@@ -40,8 +42,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col">
         <QueryProvider>
-          <AppShell>{children}</AppShell>
+          <AppShell headerActions={<UserMenu />}>{children}</AppShell>
         </QueryProvider>
+        <Toaster />
       </body>
     </html>
   );
