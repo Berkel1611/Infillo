@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Infillo",
+  title: { default: "Infillo", template: "%s | Infillo" },
   description: "Sklep z wydrukami 3D",
 };
 
