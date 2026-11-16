@@ -16,6 +16,7 @@ type PageMessageProps = {
   title: string;
   description: string;
   action?: ReactNode;
+  heading?: "h1" | "h2";
 };
 
 /** A centered message: no access, no connection... */
@@ -24,6 +25,7 @@ export function PageMessage({
   title,
   description,
   action,
+  heading: Heading = "h1",
 }: PageMessageProps) {
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-16 text-center">
@@ -32,7 +34,7 @@ export function PageMessage({
         aria-hidden
         className="size-10 text-muted-foreground"
       />
-      <h1 className="text-2xl font-semibold">{title}</h1>
+      <Heading className="text-2xl font-semibold">{title}</Heading>
       <p className="text-muted-foreground">{description}</p>
       {action}
     </div>

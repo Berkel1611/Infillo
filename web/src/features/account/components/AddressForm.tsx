@@ -156,6 +156,7 @@ export function AddressForm() {
             title="Nie udało się wczytać adresu"
             description="Sprawdź połączenie i spróbuj ponownie."
             action={<Button onClick={() => refetch()}>Spróbuj ponownie</Button>}
+            heading="h2"
           />
         ) : (
           <AddressFields address={address} />
