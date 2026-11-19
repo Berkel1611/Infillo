@@ -36,7 +36,7 @@ def register_user(*, email: str, username: str, password: str, first_name: str, 
                 last_name=last_name,
             )
     except IntegrityError:
-        # Two registrations raced past the ckech above; the UNIQUE constraint caught it
+        # Two registrations raced past the ckeck above; the UNIQUE constraint caught it
         _ensure_not_taken(email, username)
         raise
 

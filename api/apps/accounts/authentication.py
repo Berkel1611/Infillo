@@ -13,10 +13,12 @@ class CookieJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
         raw_token = request.COOKIES.get(settings.AUTH_COOKIE_NAME)
         if not raw_token:
-            return None  # no cookie -> anonymous; permission decides whether that is allowed
-        # Bad signature or expired -> InvalidToken (401)
-        validated_token = self.get_validated_token(raw_token)
-        return self.get_user(validated_token), validated_token
+            return None
+        try:
+            validated_token = self.get_validated_token(raw_token)
+            return self.get_user(validated_token), validated_token
+        except Exception:
+            return None
 
 
 def set_auth_cookie(response: HttpResponseBase, user) -> None:

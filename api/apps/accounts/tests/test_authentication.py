@@ -97,3 +97,34 @@ def test_role_change_applies_to_existing_token(login, regular_user) -> None:
     regular_user.groups.add(Group.objects.get(name=MODERATORS_GROUP))
 
     assert client.get("/test/whoami").json()["role"] == "moderator"
+
+
+def test_public_view_treats_bad_cookie_as_anonymous(regular_user) -> None:
+    expired = AccessToken.for_user(regular_user)
+    expired.set_exp(lifetime=-timedelta(minutes=1))
+    forged = jwt.encode({"user_id": regular_user.id}, "x" * 48, algorithm="HS256")
+
+    for token in ("not-a-jwt", forged, str(expired)):
+        client = APIClient()
+        client.cookies[COOKIE] = token
+        response = client.get("/test/public")
+
+        assert response.status_code == 200
+        assert response.json() == {"authenticated": False}
+
+
+def test_public_view_treats_blocked_user_as_anonymous(login, regular_user) -> None:
+    client = login(regular_user)
+    regular_user.is_active = False
+    regular_user.save()
+
+    response = client.get("/test/public")
+
+    assert response.status_code == 200
+    assert response.json() == {"authenticated": False}
+
+
+def test_public_view_sees_logged_in_user(login, regular_user) -> None:
+    response = login(regular_user).get("/test/public")
+
+    assert response.json() == {"authenticated": True}
