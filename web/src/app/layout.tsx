@@ -5,6 +5,7 @@ import { cn } from "@/shared/lib/utils";
 
 import { QueryProvider } from "@/shared/api/query-provider";
 import { AppShell } from "@/shared/layout/AppShell";
+import { SessionExpiryListener } from "@/features/auth/components/SessionExpiryListener";
 import { UserMenu } from "@/features/auth/components/UserMenu";
 import { Toaster } from "@/shared/ui/sonner";
 
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col">
         <QueryProvider>
+          <SessionExpiryListener />
           <AppShell headerActions={<UserMenu />}>{children}</AppShell>
         </QueryProvider>
         <Toaster />
