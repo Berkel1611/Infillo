@@ -26,3 +26,6 @@ uploads/
 # Local working docs
 docs/
 CLAUDE.md
+
+# Local Claude Code settings
+.claude/
