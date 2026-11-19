@@ -3,6 +3,7 @@ we only carry them in a cookie, so JavaScript on the page can never read the tok
 
 from django.conf import settings
 from django.http import HttpResponseBase
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import AccessToken
 
@@ -17,7 +18,7 @@ class CookieJWTAuthentication(JWTAuthentication):
         try:
             validated_token = self.get_validated_token(raw_token)
             return self.get_user(validated_token), validated_token
-        except Exception:
+        except AuthenticationFailed:
             return None
 
 

@@ -100,7 +100,7 @@ class UserListQuerySerializer(serializers.Serializer):
 
 
 class UserAdminUpdateSerializer(serializers.Serializer):
-    """/users/{id}. The role "admin" is not accepted:
+    """PATCH /users/{id}. The role "admin" is not accepted:
     administrators come from createsuperuser."""
 
     role = serializers.ChoiceField(choices=[ROLE_USER, ROLE_MODERATOR], required=False)
