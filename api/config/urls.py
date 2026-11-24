@@ -5,7 +5,8 @@ from apps.core.views import health
 
 urlpatterns = [
     path("health", health),
-    path("", include("apps.accounts.urls")),  # /auth/...
+    path("", include("apps.accounts.urls")),  # /auth/..., /users
+    path("", include("apps.catalog.urls")),  # /categories, /products
     path("admin/", admin.site.urls),  # Django admin: developer tool only
 ]
 
