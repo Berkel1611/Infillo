@@ -1,20 +1,26 @@
 from django.http import Http404
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from apps.accounts.permissions import IsAdmin
+from apps.accounts.permissions import IsAdmin, IsModeratorOrAdmin
 from apps.catalog.models import Category
 from apps.catalog.serializers import (
     CategoryNodeSerializer,
     CategorySerializer,
     CategoryWriteSerializer,
+    ModeratorAssignSerializer,
+    ModeratorSerializer,
 )
 from apps.catalog.services import (
     build_category_tree,
+    category_moderators,
     create_category,
     delete_category,
+    managed_category_ids,
+    set_category_moderators,
     update_category,
 )
 from apps.core.exceptions import AppError
@@ -30,6 +36,8 @@ class CategoryViewSet(viewsets.GenericViewSet):
         # DRF wants instances here, not classes
         if self.action == "list":
             return [AllowAny()]
+        if self.action == "managed":
+            return [IsModeratorOrAdmin()]
         return [IsAdmin()]
 
     def get_object(self):
@@ -59,3 +67,22 @@ class CategoryViewSet(viewsets.GenericViewSet):
     def destroy(self, request: Request, *args, **kwargs) -> Response:
         delete_category(self.get_object())
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=["get"])
+    def managed(self, request: Request) -> Response:
+        """Flat list of the categories the current user manages products in."""
+        categories = Category.objects.filter(pk__in=managed_category_ids(request.user))
+        return Response(CategorySerializer(categories, many=True).data)
+
+    @action(detail=True, methods=["get", "put"])
+    def moderators(self, request: Request, *args, **kwargs) -> Response:
+        category = self.get_object()
+        if request.method == "PUT":
+            serializer = ModeratorAssignSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            moderators = set_category_moderators(
+                category, serializer.validated_data["moderator_ids"]
+            )
+        else:
+            moderators = category_moderators(category)
+        return Response(ModeratorSerializer(moderators, many=True).data)

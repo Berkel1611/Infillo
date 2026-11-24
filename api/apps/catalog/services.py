@@ -4,11 +4,15 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
+from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 
-from apps.catalog.models import Category
+from apps.accounts.models import MODERATORS_GROUP, ROLE_ADMIN, ROLE_MODERATOR
+from apps.catalog.models import Category, CategoryModerator
 from apps.core.exceptions import AppError
+
+User = get_user_model()
 
 MAX_CATEGORY_DEPTH = 3
 
@@ -149,3 +153,52 @@ def delete_category(category: Category) -> None:
             category.delete()
     except ProtectedError:
         raise AppError("CATEGORY_NOT_EMPTY", 409) from None
+
+
+def _moderators():
+    """Accounts that currently are moderators: in the group and not a superuser (= admin).
+    Assignment rows of users who lost the role stay in the database, but never count."""
+    return User.objects.filter(groups__name=MODERATORS_GROUP, is_superuser=False)
+
+
+def category_moderators(category: Category) -> list[User]:
+    assigned = CategoryModerator.objects.filter(category=category).values("moderator_id")
+    return list(_moderators().filter(pk__in=assigned).order_by("username"))
+
+
+def set_category_moderators(category: Category, moderator_ids: list[int]) -> list[User]:
+    """Replaces the whole set of moderators of a category; all ids must be current moderators."""
+    wanted = set(moderator_ids)
+    valid = set(_moderators().filter(pk__in=wanted).values_list("pk", flat=True))
+    if valid != wanted:
+        raise AppError("USER_NOT_MODERATOR", 400)
+
+    with transaction.atomic():  # either the whole new set is saved or nothing changes
+        CategoryModerator.objects.filter(category=category).exclude(
+            moderator_id__in=wanted
+        ).delete()
+        CategoryModerator.objects.bulk_create(
+            [CategoryModerator(category=category, moderator_id=pk) for pk in wanted],
+            ignore_conflicts=True,  # rows that already exist stay as they are
+        )
+    return category_moderators(category)
+
+
+def managed_category_ids(user) -> set[int]:
+    """Categories whose products the user may manage: admin = all, moderator = assigned
+    categories and everything below them, anyone else = nothing."""
+    if not user.is_authenticated:
+        return set()
+    if user.role == ROLE_ADMIN:
+        return set(Category.objects.values_list("pk", flat=True))
+    if user.role != ROLE_MODERATOR:
+        return set()
+
+    children_of = _children_of(_load_parents())
+    assigned = set(
+        CategoryModerator.objects.filter(moderator=user).values_list("category_id", flat=True)
+    )
+    scope = set(assigned)
+    for category_id in assigned:
+        scope |= _descendants(children_of, category_id)
+    return scope

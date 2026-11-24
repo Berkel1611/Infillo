@@ -35,3 +35,14 @@ class CategoryWriteSerializer(serializers.Serializer):
         if value is not None and not Category.objects.filter(pk=value).exists():
             raise serializers.ValidationError("Category does not exist.", code="does_not_exist")
         return value
+
+
+class ModeratorSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    username = serializers.CharField()
+
+
+class ModeratorAssignSerializer(serializers.Serializer):
+    """Input of PUT /categories/{id}/moderators: the full new set of moderators."""
+
+    moderator_ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=True)
