@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import Any
+
+from django.db import IntegrityError, transaction
+from django.db.models import ProtectedError
 
 from apps.catalog.models import Category
 from apps.core.exceptions import AppError
@@ -96,3 +100,52 @@ def validate_category_placement(category_id: int | None, parent_id: int | None) 
     moved_height = 0 if category_id is None else _subtree_height(children_of, category_id)
     if parent_depth + 1 + moved_height > MAX_CATEGORY_DEPTH:
         raise AppError("CATEGORY_TOO_DEEP", 400)
+
+
+def _name_taken(name: str, parent_id: int | None, exclude_pk: int | None = None) -> bool:
+    qs = Category.objects.filter(name__iexact=name.strip(), parent_id=parent_id)
+    if exclude_pk is not None:
+        qs = qs.exclude(pk=exclude_pk)
+    return qs.exists()
+
+
+def create_category(name: str, parent_id: int | None) -> Category:
+    name = name.strip()
+    validate_category_placement(None, parent_id)
+    if _name_taken(name, parent_id):
+        raise AppError("CATEGORY_NAME_TAKEN", 409)
+    try:
+        with transaction.atomic():
+            return Category.objects.create(name=name, parent_id=parent_id)
+    except IntegrityError:
+        raise AppError("CATEGORY_NAME_TAKEN", 409) from None
+
+
+def update_category(category: Category, changes: dict[str, Any]) -> Category:
+    # A missing key means "unchanged"; parent_id=None is a real value (move to the root)
+    new_name = changes["name"].strip() if "name" in changes else category.name
+    new_parent_id = changes["parent_id"] if "parent_id" in changes else category.parent_id
+
+    if new_parent_id != category.parent_id:
+        validate_category_placement(category.id, new_parent_id)
+    # Uniqueness is about the pair (name, parent), so it is checked when either one changes
+    if _name_taken(new_name, new_parent_id, exclude_pk=category.id):
+        raise AppError("CATEGORY_NAME_TAKEN", 409)
+
+    # Assign only after every check passed, so a rejected change leaves the object untouched
+    category.name = new_name
+    category.parent_id = new_parent_id
+    try:
+        with transaction.atomic():  # savepoint: a lost race must not poison the transaction
+            category.save()
+    except IntegrityError:
+        raise AppError("CATEGORY_NAME_TAKEN", 409) from None
+    return category
+
+
+def delete_category(category: Category) -> None:
+    try:
+        with transaction.atomic():
+            category.delete()
+    except ProtectedError:
+        raise AppError("CATEGORY_NOT_EMPTY", 409) from None
