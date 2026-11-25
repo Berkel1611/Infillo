@@ -1,3 +1,4 @@
+import type { User } from "@/features/auth/types";
 import { api } from "@/shared/api/client";
 
 import type {
@@ -33,6 +34,9 @@ export const categoriesApi = {
   remove: (id: number) => api.delete(`/categories/${id}`),
   moderators: (id: number) =>
     api.get<Moderator[]>(`/categories/${id}/moderators`),
+  /** Accounts that may be assigned to a category (administrators only; max 100). */
+  moderatorAccounts: () =>
+    api.get<Page<User>>("/users?role=moderator&page_size=100"),
   setModerators: (id: number, moderatorIds: number[]) =>
     api.put<Moderator[]>(`/categories/${id}/moderators`, {
       moderator_ids: moderatorIds,

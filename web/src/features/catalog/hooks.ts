@@ -14,6 +14,7 @@ export const catalogKeys = {
   tree: ["categories", "tree"] as const,
   managedCategories: ["categories", "managed"] as const,
   moderators: (id: number) => ["categories", "moderators", id] as const,
+  moderatorAccounts: ["categories", "moderator-accounts"] as const,
   products: ["products"] as const,
   list: (query: ProductsQuery) => ["products", "list", query] as const,
   managedList: (query: ProductsQuery) =>
@@ -42,6 +43,14 @@ export function useCategoryModerators(id: number | null) {
     queryKey: catalogKeys.moderators(id ?? 0),
     queryFn: () => categoriesApi.moderators(id as number),
     enabled: id !== null,
+  });
+}
+
+/** All accounts with the moderator role: the choices in the assignment dialog. */
+export function useModeratorAccounts() {
+  return useQuery({
+    queryKey: catalogKeys.moderatorAccounts,
+    queryFn: async () => (await categoriesApi.moderatorAccounts()).results,
   });
 }
 
