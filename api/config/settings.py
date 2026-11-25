@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     # Our apps
     "apps.core",
     "apps.accounts",
+    "apps.catalog",
 ]
 
 # Must be set before the first migrate

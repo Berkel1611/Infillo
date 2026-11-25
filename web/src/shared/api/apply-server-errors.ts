@@ -7,6 +7,7 @@ import { errorMessage, fieldErrorMessage } from "./error-messages";
 const CODE_FIELDS: Record<string, string> = {
   EMAIL_TAKEN: "email",
   USERNAME_TAKEN: "username",
+  CATEGORY_NAME_TAKEN: "name",
 };
 
 /**
