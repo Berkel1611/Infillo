@@ -253,6 +253,59 @@ def test_variant_combination_can_be_reused_after_replacing(administrator, publis
     assert variants["S"].pk != old_small.pk and variants["S"].stock == 9
 
 
+def test_variants_can_swap_their_combinations(administrator, published_product):
+    # S and M trade places in one request: a valid final state that a naive
+    # one-by-one update would break on the unique (product, color, material, size) constraint
+    small, medium = published_product.variants.order_by("id")
+
+    save_product(
+        administrator,
+        data={"variants": [{"id": small.id, "size": "M"}, {"id": medium.id, "size": "S"}]},
+        product=published_product,
+    )
+
+    small.refresh_from_db()
+    medium.refresh_from_db()
+    assert (small.size, medium.size) == ("M", "S")
+    assert published_product.variants.count() == 2
+
+
+def test_duplicate_final_combinations_are_a_400_not_a_500(administrator, published_product):
+    small, medium = published_product.variants.order_by("id")
+
+    # "a" becomes M while "b" (kept as it is) is M already
+    error = error_of(
+        save_product,
+        administrator,
+        data={"variants": [{"id": small.id, "size": "M"}, {"id": medium.id}]},
+        product=published_product,
+    )
+
+    assert (error.error_code, error.status_code) == ("DUPLICATE_VARIANT", 400)
+    small.refresh_from_db()
+    assert small.size == "S"  # nothing was saved
+
+
+def test_new_variant_duplicating_a_kept_one_is_rejected(administrator, published_product):
+    small, medium = published_product.variants.order_by("id")
+
+    error = error_of(
+        save_product,
+        administrator,
+        data={
+            "variants": [
+                {"id": small.id},
+                {"id": medium.id},
+                variant_data(size="S"),  # same color, material and size as `small`
+            ]
+        },
+        product=published_product,
+    )
+
+    assert error.error_code == "DUPLICATE_VARIANT"
+    assert published_product.variants.count() == 2
+
+
 def test_foreign_variant_id_rejected(administrator, published_product):
     other = save_product(
         administrator, data=product_data(make("Figurki"), variants=[variant_data()])

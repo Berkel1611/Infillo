@@ -176,6 +176,39 @@ def test_link_rel_and_class_must_be_short_text(attr):
         assert code_of(doc(paragraph(text("x", mark)))) == "attr_not_allowed"
 
 
+# --- link rel / class (code review: reverse tabnabbing, class injection) ---
+
+
+@pytest.mark.parametrize("rel", ["opener", "", "evil", "noopener evil", "noreferrer", "OPENER"])
+def test_link_rel_must_contain_noopener_and_nothing_unknown(rel):
+    mark = link("https://a.pl", target="_blank", rel=rel)
+    assert code_of(doc(paragraph(text("x", mark)))) == "attr_not_allowed"
+
+
+@pytest.mark.parametrize("rel", ["noopener", "noopener noreferrer", "noopener noreferrer nofollow"])
+def test_link_rel_with_noopener_is_accepted(rel):
+    validate_description(doc(paragraph(text("x", link("https://a.pl", rel=rel)))))
+
+
+@pytest.mark.parametrize("value", ["fixed inset-0 z-50", "", "a"])
+def test_link_class_must_be_missing(value):
+    mark = link("https://a.pl", **{"class": value})
+    assert code_of(doc(paragraph(text("x", mark)))) == "attr_not_allowed"
+
+
+# --- NUL character (PostgreSQL jsonb refuses it, so it used to end in a 500) ---
+
+
+def test_nul_character_in_text_is_rejected():
+    assert code_of(doc(paragraph(text("a\x00b")))) == "invalid_document"
+
+
+@pytest.mark.parametrize("attr", ["rel", "title"])
+def test_nul_character_in_link_attributes_is_rejected(attr):
+    mark = link("https://a.pl", **{attr: "noopener\x00"})
+    assert code_of(doc(paragraph(text("x", mark)))) == "attr_not_allowed"
+
+
 # --- links ---
 
 

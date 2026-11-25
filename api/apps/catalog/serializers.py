@@ -56,6 +56,8 @@ class ModeratorAssignSerializer(serializers.Serializer):
 # --- products: input ---
 
 VARIANT_COMBINATION_FIELDS = ("color", "material", "size")
+# stock is a 4-byte integer column: a bigger number would be a database error (500)
+MAX_STOCK = 2_147_483_647
 
 
 class VariantWriteSerializer(serializers.Serializer):
@@ -70,7 +72,7 @@ class VariantWriteSerializer(serializers.Serializer):
     price = serializers.DecimalField(
         max_digits=8, decimal_places=2, min_value=Decimal("0.01"), required=False
     )
-    stock = serializers.IntegerField(min_value=0, required=False)
+    stock = serializers.IntegerField(min_value=0, max_value=MAX_STOCK, required=False)
     made_to_order = serializers.BooleanField(required=False)
 
     def validate(self, attrs: dict) -> dict:

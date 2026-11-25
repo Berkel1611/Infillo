@@ -243,6 +243,9 @@ VARIANT_FIELDS = ("color", "material", "size", "price", "stock", "made_to_order"
 PRODUCT_FIELDS = ("name", "description", "category_id", "is_published")
 
 
+COMBINATION_FIELDS = ("color", "material", "size")
+
+
 def _sync_variants(product: Product, items: list[dict[str, Any]]) -> None:
     """Makes the variants of `product` equal to `items`: with id -> update, without -> create,
     missing from the list -> delete."""
@@ -251,17 +254,47 @@ def _sync_variants(product: Product, items: list[dict[str, Any]]) -> None:
     if not kept_ids <= existing.keys():  # an id of another product (or of no product at all)
         raise AppError("VARIANT_NOT_FOUND", 400)
 
+    # The list is the final state, so its combinations must be distinct. A kept variant keeps
+    # the values the request does not mention, which is why this is checked here and not only
+    # in the serializer (it sees just what the request says).
+    def combination(item: dict[str, Any]) -> tuple[str, ...]:
+        current = existing.get(item.get("id"))
+        return tuple(
+            item[name] if name in item else getattr(current, name, "")
+            for name in COMBINATION_FIELDS
+        )
+
+    combinations = [combination(item) for item in items]
+    if len(set(combinations)) != len(combinations):
+        raise AppError("DUPLICATE_VARIANT", 400)
+
     # Deleting first: a variant can be replaced by one with the same combination in one request
     product.variants.exclude(id__in=kept_ids).delete()
+
+    updates = [
+        (existing[item["id"]], {name: item[name] for name in VARIANT_FIELDS if name in item})
+        for item in items
+        if item.get("id") is not None
+    ]
+    # Variants may trade combinations (S <-> M). Saved one by one, the first save would clash
+    # with the other variant on the unique constraint although the final state is valid, so the
+    # variants that change their combination are first parked on a unique placeholder size.
+    for variant, fields in updates:
+        if any(
+            name in fields and fields[name] != getattr(variant, name) for name in COMBINATION_FIELDS
+        ):
+            variant.size = f"~{variant.pk}"
+            variant.save(update_fields=["size"])
+    for variant, fields in updates:
+        for name, value in fields.items():
+            setattr(variant, name, value)
+        variant.save()
+
     for item in items:
-        fields = {name: item[name] for name in VARIANT_FIELDS if name in item}
         if item.get("id") is None:
-            ProductVariant.objects.create(product=product, **fields)
-        else:
-            variant = existing[item["id"]]
-            for name, value in fields.items():
-                setattr(variant, name, value)
-            variant.save()
+            ProductVariant.objects.create(
+                product=product, **{name: item[name] for name in VARIANT_FIELDS if name in item}
+            )
 
 
 def save_product(user, *, data: dict[str, Any], product: Product | None = None) -> Product:

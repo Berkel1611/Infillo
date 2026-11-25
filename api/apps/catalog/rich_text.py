@@ -22,6 +22,8 @@ MAX_HREF_LENGTH = 2048
 MAX_ATTR_TEXT_LENGTH = 200
 ALLOWED_LINK_SCHEMES = frozenset({"http", "https"})  # no mailto: (working decision, stage 2 spec)
 ORDERED_LIST_TYPES = frozenset({"1", "a", "A", "i", "I"})
+# What a link's rel may contain; "noopener" is required (see _link_rel)
+ALLOWED_REL_TOKENS = frozenset({"noopener", "noreferrer", "nofollow", "ugc"})
 
 
 class InvalidDescription(Exception):
@@ -62,7 +64,28 @@ def _link_target(value: Any) -> None:
 
 
 def _short_text(value: Any) -> None:
-    if value is not None and (not isinstance(value, str) or len(value) > MAX_ATTR_TEXT_LENGTH):
+    # NUL: PostgreSQL's jsonb refuses it, which would end in a 500
+    if value is not None and (
+        not isinstance(value, str) or len(value) > MAX_ATTR_TEXT_LENGTH or "\x00" in value
+    ):
+        raise _fail("attr_not_allowed")
+
+
+def _link_rel(value: Any) -> None:
+    """A link opens in a new tab, so rel must keep "noopener": without it the opened page gets
+    window.opener and can redirect the shop's own tab (reverse tabnabbing). Only known tokens."""
+    if value is None:
+        return
+    _short_text(value)
+    tokens = value.split()
+    if "noopener" not in tokens or not set(tokens) <= ALLOWED_REL_TOKENS:
+        raise _fail("attr_not_allowed")
+
+
+def _link_class(value: Any) -> None:
+    """The editor never sets a class on a link. Accepting one would let a client pick any CSS
+    class of the app (e.g. a full-screen overlay made of Tailwind utilities)."""
+    if value is not None:
         raise _fail("attr_not_allowed")
 
 
@@ -102,8 +125,8 @@ MARK_ATTRS: dict[str, dict[str, AttrCheck]] = {
     "link": {
         "href": _link_href,
         "target": _link_target,
-        "rel": _short_text,
-        "class": _short_text,
+        "rel": _link_rel,
+        "class": _link_class,
         "title": _short_text,  # TipTap 3 always emits it (null unless set)
     },
 }
@@ -153,7 +176,8 @@ def _check_node(node: Any, depth: int) -> None:
     if kind == "text":  # a leaf: not counted in the depth
         if not set(node) <= TEXT_NODE_KEYS:
             raise _fail("attr_not_allowed")
-        if not isinstance(node.get("text"), str):
+        text = node.get("text")
+        if not isinstance(text, str) or "\x00" in text:  # NUL: see _short_text
             raise _fail("invalid_document")
         marks = node.get("marks", [])
         if not isinstance(marks, list):

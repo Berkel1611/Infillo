@@ -279,6 +279,82 @@ def test_publish_rules_400(login, administrator):
 # --- variants on PATCH ---
 
 
+def test_stock_above_the_database_limit_is_a_400(login, administrator):
+    # PositiveIntegerField is a 4-byte integer: a larger number used to end in a 500
+    body = payload(make("Dom"), variants=[variant(stock=3_000_000_000)])
+
+    response = login(administrator).post("/products", body, format="json")
+
+    assert (response.status_code, code(response)) == (400, "VALIDATION_ERROR")
+    assert {"field": "variants.0.stock", "type": "max_value"} in field_errors(response)
+
+
+def test_nul_character_in_description_is_a_400(login, administrator):
+    bad = {
+        "type": "doc",
+        "content": [{"type": "paragraph", "content": [{"type": "text", "text": "a\u0000b"}]}],
+    }
+
+    response = login(administrator).post(
+        "/products", payload(make("Dom"), description=bad), format="json"
+    )
+
+    assert (response.status_code, code(response)) == (400, "VALIDATION_ERROR")
+    assert {"field": "description", "type": "invalid_document"} in field_errors(response)
+
+
+def test_unsafe_link_rel_and_class_are_a_400(login, administrator):
+    def description(**attrs):
+        mark = {
+            "type": "link",
+            "attrs": {"href": "https://evil.example", "target": "_blank", **attrs},
+        }
+        text = {"type": "text", "text": "klik", "marks": [mark]}
+        return {"type": "doc", "content": [{"type": "paragraph", "content": [text]}]}
+
+    client = login(administrator)
+    category = make("Dom")
+    for attrs in ({"rel": "opener"}, {"class": "fixed inset-0 z-50"}):
+        response = client.post(
+            "/products", payload(category, description=description(**attrs)), format="json"
+        )
+        assert (response.status_code, code(response)) == (400, "VALIDATION_ERROR"), attrs
+        assert {"field": "description", "type": "attr_not_allowed"} in field_errors(response)
+    assert Product.objects.count() == 0
+
+
+def test_patch_can_swap_variant_combinations(login, administrator):
+    product = make_product(make("Dom"), size="S")
+    first = product.variants.get()
+    second = ProductVariant.objects.create(product=product, price=Decimal("20.00"), size="M")
+
+    response = login(administrator).patch(
+        f"/products/{product.id}",
+        {"variants": [{"id": first.id, "size": "M"}, {"id": second.id, "size": "S"}]},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert {v["id"]: v["size"] for v in response.json()["variants"]} == {
+        first.id: "M",
+        second.id: "S",
+    }
+
+
+def test_patch_with_duplicate_final_combinations_is_a_400(login, administrator):
+    product = make_product(make("Dom"), size="S")
+    first = product.variants.get()
+    second = ProductVariant.objects.create(product=product, price=Decimal("20.00"), size="M")
+
+    response = login(administrator).patch(
+        f"/products/{product.id}",
+        {"variants": [{"id": first.id, "size": "M"}, {"id": second.id}]},
+        format="json",
+    )
+
+    assert (response.status_code, code(response)) == (400, "DUPLICATE_VARIANT")
+
+
 def test_patch_variants_replace(login, administrator):
     category = make("Dom")
     product = make_product(category, size="S")
