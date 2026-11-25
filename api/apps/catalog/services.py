@@ -11,7 +11,14 @@ from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 
 from apps.accounts.models import MODERATORS_GROUP, ROLE_ADMIN, ROLE_MODERATOR
-from apps.catalog.models import Category, CategoryModerator, ProductVariant
+from apps.catalog.models import (
+    Category,
+    CategoryModerator,
+    Product,
+    ProductVariant,
+    empty_description,
+)
+from apps.catalog.rich_text import is_empty_description
 from apps.core.exceptions import AppError
 
 User = get_user_model()
@@ -230,3 +237,84 @@ def variant_availability(stock: int, made_to_order: bool) -> Availability:
 def product_availability(variants: Iterable[ProductVariant]) -> Availability:
     statuses = {variant_availability(v.stock, v.made_to_order) for v in variants}
     return next((s for s in _AVAILABILITY_RANK if s in statuses), Availability.OUT_OF_STOCK)
+
+
+VARIANT_FIELDS = ("color", "material", "size", "price", "stock", "made_to_order")
+PRODUCT_FIELDS = ("name", "description", "category_id", "is_published")
+
+
+def _sync_variants(product: Product, items: list[dict[str, Any]]) -> None:
+    """Makes the variants of `product` equal to `items`: with id -> update, without -> create,
+    missing from the list -> delete."""
+    existing = {variant.id: variant for variant in product.variants.all()}
+    kept_ids = {item["id"] for item in items if item.get("id") is not None}
+    if not kept_ids <= existing.keys():  # an id of another product (or of no product at all)
+        raise AppError("VARIANT_NOT_FOUND", 400)
+
+    # Deleting first: a variant can be replaced by one with the same combination in one request
+    product.variants.exclude(id__in=kept_ids).delete()
+    for item in items:
+        fields = {name: item[name] for name in VARIANT_FIELDS if name in item}
+        if item.get("id") is None:
+            ProductVariant.objects.create(product=product, **fields)
+        else:
+            variant = existing[item["id"]]
+            for name, value in fields.items():
+                setattr(variant, name, value)
+            variant.save()
+
+
+def save_product(user, *, data: dict[str, Any], product: Product | None = None) -> Product:
+    """Creates a product (`product=None`) or applies `data` to it; a missing key means
+    "unchanged", `variants` present means "replace the whole list".
+
+    The scope check lives here, not in the view: both the product's current category and
+    the target category must be managed by `user`. The description is validated by the
+    serializer (rich_text.validate_description); this function only checks publishing rules.
+    """
+    managed = managed_category_ids(user)
+    if product is not None and product.category_id not in managed:
+        raise AppError("CATEGORY_NOT_MANAGED", 403)
+    category_id = data.get("category_id", product.category_id if product else None)
+    if category_id not in managed:
+        raise AppError("CATEGORY_NOT_MANAGED", 403)
+
+    # Publishing rules apply to the state the product will have after this save
+    variants = data.get("variants")
+    is_published = data.get("is_published", product.is_published if product else False)
+    description = data.get("description", product.description if product else empty_description())
+    if is_published:
+        if variants is not None:
+            variant_count = len(variants)
+        else:
+            variant_count = product.variants.count() if product else 0
+        if variant_count == 0:
+            raise AppError("PUBLISH_REQUIRES_VARIANT", 400)
+        if is_empty_description(description):
+            raise AppError("PUBLISH_REQUIRES_DESCRIPTION", 400)
+
+    with transaction.atomic():  # the product and its variants are saved together or not at all
+        if product is None:
+            product = Product(created_by=user)
+        for name in PRODUCT_FIELDS:
+            if name in data:
+                setattr(product, name, data[name])
+        product.save()
+        if variants is not None:
+            _sync_variants(product, variants)
+    return product
+
+
+def category_path(category_id: int) -> list[dict[str, Any]]:
+    """Ancestors of a category from the root down to the category itself: [{id, name}, ...]."""
+    rows = {
+        id_: (parent_id, name)
+        for id_, parent_id, name in Category.objects.values_list("id", "parent_id", "name")
+    }
+    path: list[dict[str, Any]] = []
+    current: int | None = category_id
+    while current is not None:
+        parent_id, name = rows[current]
+        path.append({"id": current, "name": name})
+        current = parent_id
+    return path[::-1]
