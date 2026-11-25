@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import Any
 
 from django.contrib.auth import get_user_model
@@ -9,7 +11,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 
 from apps.accounts.models import MODERATORS_GROUP, ROLE_ADMIN, ROLE_MODERATOR
-from apps.catalog.models import Category, CategoryModerator
+from apps.catalog.models import Category, CategoryModerator, ProductVariant
 from apps.core.exceptions import AppError
 
 User = get_user_model()
@@ -202,3 +204,29 @@ def managed_category_ids(user) -> set[int]:
     for category_id in assigned:
         scope |= _descendants(children_of, category_id)
     return scope
+
+
+class Availability(StrEnum):
+    """Availability codes exposed by the API; the frontend turns them into Polish labels."""
+
+    AVAILABLE = "AVAILABLE"
+    MADE_TO_ORDER = "MADE_TO_ORDER"
+    OUT_OF_STOCK = "OUT_OF_STOCK"
+
+
+# Best first: a product shows the best status among its variants
+_AVAILABILITY_RANK = (Availability.AVAILABLE, Availability.MADE_TO_ORDER, Availability.OUT_OF_STOCK)
+
+
+def variant_availability(stock: int, made_to_order: bool) -> Availability:
+    """Pure function (no model property): the cart (stage 5) reuses it on its own data."""
+    if stock > 0:
+        return Availability.AVAILABLE
+    if made_to_order:
+        return Availability.MADE_TO_ORDER
+    return Availability.OUT_OF_STOCK
+
+
+def product_availability(variants: Iterable[ProductVariant]) -> Availability:
+    statuses = {variant_availability(v.stock, v.made_to_order) for v in variants}
+    return next((s for s in _AVAILABILITY_RANK if s in statuses), Availability.OUT_OF_STOCK)
