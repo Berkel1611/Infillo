@@ -1,6 +1,6 @@
 import pytest
 
-from apps.catalog.models import Category
+from apps.catalog.models import Category, Product
 from apps.catalog.services import create_category, delete_category, update_category
 from apps.core.exceptions import AppError
 
@@ -152,3 +152,13 @@ def test_delete_with_children_is_conflict():
     assert error_code(exc) == "CATEGORY_NOT_EMPTY"
     assert exc.value.status_code == 409
     assert Category.objects.filter(pk=parent.pk).exists()
+
+
+def test_delete_with_product_is_conflict():
+    category = make("Dom")
+    Product.objects.create(name="Figurka", category=category)
+
+    with pytest.raises(AppError) as exc:
+        delete_category(category)
+    assert exc.value.error_code == "CATEGORY_NOT_EMPTY"
+    assert Category.objects.filter(pk=category.pk).exists()
