@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  FolderLibraryIcon,
   Logout01Icon,
+  Package01Icon,
   ShieldUserIcon,
   UserSettings01Icon,
 } from "@hugeicons/core-free-icons";
@@ -74,11 +76,23 @@ export function UserMenu() {
           <HugeiconsIcon icon={UserSettings01Icon} aria-hidden />
           Konto
         </DropdownMenuItem>
-        {user.role === "admin" && (
-          <DropdownMenuItem render={<Link href="/admin/users" />}>
-            <HugeiconsIcon icon={ShieldUserIcon} aria-hidden />
-            Panel administratora
+        {(user.role === "moderator" || user.role === "admin") && (
+          <DropdownMenuItem render={<Link href="/manage/products" />}>
+            <HugeiconsIcon icon={Package01Icon} aria-hidden />
+            Moje produkty
           </DropdownMenuItem>
+        )}
+        {user.role === "admin" && (
+          <>
+            <DropdownMenuItem render={<Link href="/admin/categories" />}>
+              <HugeiconsIcon icon={FolderLibraryIcon} aria-hidden />
+              Kategorie
+            </DropdownMenuItem>
+            <DropdownMenuItem render={<Link href="/admin/users" />}>
+              <HugeiconsIcon icon={ShieldUserIcon} aria-hidden />
+              Panel administratora
+            </DropdownMenuItem>
+          </>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
