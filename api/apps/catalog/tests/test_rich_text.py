@@ -8,8 +8,10 @@ from pathlib import Path
 import pytest
 
 from apps.catalog.rich_text import (
+    MARK_ATTRS,
     MAX_DEPTH,
     MAX_DOCUMENT_CHARS,
+    NODE_ATTRS,
     InvalidDescription,
     is_empty_description,
     validate_description,
@@ -57,6 +59,28 @@ def nested(levels: int) -> dict:
 
 
 # --- accepted ---
+
+
+def test_real_editor_output_is_accepted():
+    # tiptap_description.json is the unedited getJSON() of the real TipTap 3 editor
+    # (web/src/shared/rich-text/extensions.ts) fed a document with every allowed element.
+    # Review Focus 1: the editor adds attributes we did not expect, e.g. link "title": null
+    validate_description(load_fixture())
+
+
+def test_fixture_covers_every_allowed_node_and_mark():
+    nodes: set[str] = set()
+    marks: set[str] = set()
+
+    def walk(node: dict) -> None:
+        nodes.add(node["type"])
+        marks.update(mark["type"] for mark in node.get("marks", []))
+        for child in node.get("content", []):
+            walk(child)
+
+    walk(load_fixture())
+    assert nodes == set(NODE_ATTRS)
+    assert marks == set(MARK_ATTRS)
 
 
 def test_editor_document_is_accepted():
@@ -145,7 +169,7 @@ def test_link_target_must_be_blank_or_missing(target):
     assert code_of(doc(paragraph(text("x", mark)))) == "attr_not_allowed"
 
 
-@pytest.mark.parametrize("attr", ["rel", "class"])
+@pytest.mark.parametrize("attr", ["rel", "class", "title"])
 def test_link_rel_and_class_must_be_short_text(attr):
     for value in ("x" * 201, 5, ["a"]):
         mark = link("https://a.pl", **{attr: value})

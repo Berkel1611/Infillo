@@ -130,3 +130,38 @@
     outline-offset: 2px;
   }
 }
+
+/* Product description written in the rich text editor (shared/rich-text) */
+.rich-text {
+  & :where(p, ul, ol) {
+    margin-block: 0 0.75em;
+  }
+  & :where(h2) {
+    @apply mt-6 mb-2 text-xl font-semibold first:mt-0;
+  }
+  & :where(h3) {
+    @apply mt-5 mb-2 text-lg font-semibold first:mt-0;
+  }
+  & > :last-child,
+  & .ProseMirror > :last-child {
+    margin-bottom: 0;
+  }
+  & strong {
+    @apply font-semibold;
+  }
+  & a {
+    @apply font-medium underline underline-offset-4;
+  }
+  & ul {
+    @apply list-disc pl-6;
+  }
+  & ol {
+    @apply list-decimal pl-6;
+  }
+  & li + li {
+    margin-top: 0.25em;
+  }
+  & li > p {
+    margin-bottom: 0;
+  }
+}

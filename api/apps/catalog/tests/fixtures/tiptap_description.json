@@ -4,37 +4,45 @@
     {
       "type": "heading",
       "attrs": { "level": 2 },
-      "content": [{ "type": "text", "text": "Opis produktu" }]
+      "content": [{ "type": "text", "text": "Naglowek" }]
+    },
+    {
+      "type": "heading",
+      "attrs": { "level": 3 },
+      "content": [{ "type": "text", "text": "Podtytul" }]
     },
     {
       "type": "paragraph",
       "content": [
-        { "type": "text", "text": "Zwykły tekst, " },
+        { "type": "text", "text": "Tekst " },
         { "type": "text", "marks": [{ "type": "bold" }], "text": "pogrubiony" },
         { "type": "text", "text": " i " },
         { "type": "text", "marks": [{ "type": "italic" }], "text": "pochylony" },
         { "type": "hardBreak" },
+        { "type": "text", "text": "po lamaniu " },
         {
           "type": "text",
           "marks": [
             {
               "type": "link",
               "attrs": {
-                "href": "https://example.com/instrukcja?lang=pl",
+                "href": "https://example.com/a?b=1",
                 "target": "_blank",
-                "rel": "noopener noreferrer nofollow",
-                "class": null
+                "rel": "noopener noreferrer",
+                "class": null,
+                "title": null
               }
             }
           ],
-          "text": "instrukcja"
+          "text": "link"
+        },
+        { "type": "text", "text": " oraz " },
+        {
+          "type": "text",
+          "marks": [{ "type": "bold" }, { "type": "italic" }],
+          "text": "oba"
         }
       ]
-    },
-    {
-      "type": "heading",
-      "attrs": { "level": 3 },
-      "content": [{ "type": "text", "text": "Parametry" }]
     },
     {
       "type": "bulletList",
@@ -42,19 +50,25 @@
         {
           "type": "listItem",
           "content": [
-            { "type": "paragraph", "content": [{ "type": "text", "text": "wysokość 12 cm" }] }
+            { "type": "paragraph", "content": [{ "type": "text", "text": "punkt" }] }
+          ]
+        },
+        {
+          "type": "listItem",
+          "content": [
+            { "type": "paragraph", "content": [{ "type": "text", "text": "drugi" }] }
           ]
         }
       ]
     },
     {
       "type": "orderedList",
-      "attrs": { "start": 1, "type": null },
+      "attrs": { "start": 3, "type": null },
       "content": [
         {
           "type": "listItem",
           "content": [
-            { "type": "paragraph", "content": [{ "type": "text", "text": "wydrukuj" }] }
+            { "type": "paragraph", "content": [{ "type": "text", "text": "trzeci" }] }
           ]
         }
       ]

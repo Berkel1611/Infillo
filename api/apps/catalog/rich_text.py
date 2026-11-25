@@ -104,6 +104,7 @@ MARK_ATTRS: dict[str, dict[str, AttrCheck]] = {
         "target": _link_target,
         "rel": _short_text,
         "class": _short_text,
+        "title": _short_text,  # TipTap 3 always emits it (null unless set)
     },
 }
 # attributes that must be present, and the error code when they are not
