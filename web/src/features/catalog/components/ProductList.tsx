@@ -36,6 +36,19 @@ export function ProductList() {
   const searchId = useId();
   const query = useListQuery();
   const [searchInput, setSearchInput] = useState(query.search);
+  // The address is also changed from outside (the "show all" button, the back button). Then the
+  // field must show it, or the debounce below would push the old text back into the address.
+  // The value this component wrote itself is remembered, so that echo of our own change never
+  // overwrites what the user is still typing.
+  const [pushedSearch, setPushedSearch] = useState(query.search);
+  const [seenSearch, setSeenSearch] = useState(query.search);
+  if (query.search !== seenSearch) {
+    setSeenSearch(query.search);
+    if (query.search.trim() !== pushedSearch.trim()) {
+      setSearchInput(query.search);
+      setPushedSearch(query.search);
+    }
+  }
   const products = useProducts(query);
   const categories = useCategories();
 
@@ -43,6 +56,7 @@ export function ProductList() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchInput.trim() !== query.search.trim()) {
+        setPushedSearch(searchInput);
         router.replace(
           productsHref({ category: query.category, search: searchInput }),
         );

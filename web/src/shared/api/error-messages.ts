@@ -24,6 +24,8 @@ const messages: Record<string, string> = {
   USER_NOT_MODERATOR: "Do kategorii można przydzielić tylko moderatorów.",
   PRODUCT_NOT_FOUND: "Nie znaleziono takiego produktu.",
   VARIANT_NOT_FOUND: "Nie znaleziono wariantu tego produktu.",
+  DUPLICATE_VARIANT:
+    "Warianty nie mogą się powtarzać: kolor, materiał i rozmiar muszą się różnić.",
   PUBLISH_REQUIRES_VARIANT:
     "Aby opublikować produkt, dodaj co najmniej jeden wariant.",
   PUBLISH_REQUIRES_DESCRIPTION: "Aby opublikować produkt, uzupełnij jego opis.",

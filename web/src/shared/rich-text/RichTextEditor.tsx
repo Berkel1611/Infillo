@@ -8,6 +8,7 @@ import type { FieldControlProps } from "@/shared/ui/form-field";
 
 import { richTextExtensions } from "./extensions";
 import { LinkDialog } from "./LinkDialog";
+import { normalizeDocument } from "./normalize";
 import { RichTextToolbar } from "./RichTextToolbar";
 
 type RichTextEditorProps = Partial<FieldControlProps> & {
@@ -37,7 +38,7 @@ export function RichTextEditor({
 
   const editor = useEditor({
     extensions: richTextExtensions(),
-    content: initialContent ?? "",
+    content: initialContent ? normalizeDocument(initialContent) : "",
     // Next.js renders client components on the server too; TipTap must wait for the browser
     immediatelyRender: false,
     editorProps: {

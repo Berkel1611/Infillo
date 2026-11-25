@@ -1,6 +1,8 @@
 import type { JSONContent } from "@tiptap/react";
 import type { Path } from "react-hook-form";
 
+import { normalizeDocument } from "@/shared/rich-text/normalize";
+
 import type {
   ProductDetail,
   ProductInput,
@@ -71,7 +73,9 @@ export function toInput(values: ProductFormValues): ProductInput {
   return {
     name: values.name.trim(),
     category_id: Number(values.category_id),
-    ...(values.description && { description: values.description }),
+    ...(values.description && {
+      description: normalizeDocument(values.description),
+    }),
     is_published: values.is_published,
     variants: values.variants.map((row): VariantInput => ({
       ...(row.variantId !== undefined && { id: row.variantId }),
@@ -143,9 +147,13 @@ export const priceRules = {
   },
 };
 
+// The server column is a 4-byte integer
+const MAX_STOCK = 2_147_483_647;
+
 export const stockRules = {
   validate: (value: string) =>
-    /^\d+$/.test(value.trim()) || "Podaj liczbę całkowitą, 0 lub więcej.",
+    (/^\d+$/.test(value.trim()) && Number(value) <= MAX_STOCK) ||
+    "Podaj liczbę całkowitą od 0 do 2 147 483 647.",
 };
 
 export const variantTextRules = {
